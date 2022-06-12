@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Blog from './components/Blog'
 import Notification from './components/Notification'
+import LoginForm from './components/LoginForm'
+import BlogForm from './components/BlogForm'
+import Togglable from './components/Togglable'
 import blogService from './services/blogs'
 import loginService from './services/login'
 
@@ -9,11 +12,10 @@ const App = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [url, setUrl] = useState("");
   const [message, setMessage] = useState(null);
   const [status, setStatus] = useState(null);
+
+  const blogFormRef = useRef();
 
   useEffect(() => {
     blogService.getAll().then(blogs =>
@@ -47,7 +49,7 @@ const App = () => {
       }, 5000);
     }
     catch(exception){
-      setMessage("Invalid username or password.");
+      setMessage("Invalid username or password");
       setStatus("error");
       setTimeout(() => {
         setMessage(null);
@@ -67,23 +69,22 @@ const App = () => {
     }, 5000);
   }
 
-  const handleAddBlog = async (event) => {
-    event.preventDefault();
+  const incrementLikes = async (id, blogObject) => {
+    const returnedBlog = await blogService.update(id, blogObject);
+    setBlogs(blogs.map(b => b.id === returnedBlog.id ? returnedBlog : b));
+  };
+
+  const addBlog = async (blogObject) => {
     try{
-      const newBlog = {
-        title, author, url
-      };
-      const returnedBlog = await blogService.create(newBlog);
+      const returnedBlog = await blogService.create(blogObject);
       setBlogs(blogs.concat(returnedBlog));
-      setTitle("");
-      setAuthor("");
-      setUrl("");
       setMessage("Successfully added new blog");
       setStatus("success");
       setTimeout(() => {
         setMessage(null);
         setStatus(null);
       }, 5000);
+      blogFormRef.current.toggleVisibility();
     }
     catch(exception){
       setMessage(exception.error);
@@ -97,55 +98,49 @@ const App = () => {
 
   const loginForm = () => {
     return (
-      <form onSubmit={handleLogin}>
-        <div>
-          Username <input
-            type="text"
-            value={username}
-            name="Username"
-            onChange={({target}) => setUsername(target.value)}
-          />
-        </div>
-        <div>
-          Password <input
-            type="password"
-            value={password}
-            name="Password"
-            onChange={({target}) => setPassword(target.value)}
-          />
-        </div>
-        <button>Login</button>
-      </form>
+      <Togglable buttonLabel="Login">
+        <LoginForm
+          username={username}
+          password={password}
+          handleUsernameChange={({target}) => setUsername(target.value)}
+          handlePasswordChange={({target}) => setPassword(target.value)}
+          handleSubmit={handleLogin}
+        />
+      </Togglable>
     );
   };
 
   const blogsForm = () => {
     return (
-      <form onSubmit={handleAddBlog}>
-        Title: <input
-          type="text"
-          value={title}
-          onChange={({target}) => setTitle(target.value)}
-        />
-        Author: <input
-          type="text"
-          value={author}
-          onChange={({target}) => setAuthor(target.value)}
-        />
-        URL: <input
-          type="text"
-          value={url}
-          onChange={({target}) => setUrl(target.value)}
-        />
-        <button>Submit</button>
-      </form>
+      <Togglable buttonLabel="new blog" ref={blogFormRef}>
+        <BlogForm addBlog={addBlog}/>
+      </Togglable>
     );
   };
 
+  const removeBlog = async (id) => {
+    await blogService.del(id);
+    setBlogs(blogs.filter(b => b.id !== id));
+  };
+
+  const sortingFunction = (a, b) => {
+    if(a.likes < b.likes){
+      return 1;
+    }
+    else if(a.likes > b.likes){
+      return -1;
+    }
+    return 0;
+  };
+
   const blogsList = () => {
-    return (blogs.map(blog =>
-      <Blog key={blog.id} blog={blog} />
-    ))
+    return (
+      blogs
+        .sort(sortingFunction)
+        .map(blog =>
+          <Blog key={blog.id} user={user} blog={blog} incrementLikes={incrementLikes} removeBlog={removeBlog}/>
+        )
+    );
   };
 
   return (
