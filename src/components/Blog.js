@@ -27,7 +27,7 @@ const Blog = ({user, blog, incrementLikes, removeBlog}) => {
     console.log(user);
     console.log(blog);
     return (
-      <div>
+      <div className="blog-details">
         <p>URL : {blog.url}</p>
         <p>Likes : {blog.likes} <button onClick={handleLikes}>Like</button></p>
         {user.id === blog.user ? <button onClick={handleRemove}>Remove</button> : ""}
@@ -36,7 +36,7 @@ const Blog = ({user, blog, incrementLikes, removeBlog}) => {
   };
 
   return (
-    <div>
+    <div className="blog-info">
       {blog.title} {blog.author} <button onClick={toggleVisibility}>{visible ? "Hide" : "View"}</button>
       {visible ? blogDetails() : ""}
     </div> 
